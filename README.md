@@ -1,6 +1,6 @@
-# project-mark — macOS Port (Educational Reference)
+# project-mark — macOS (Educational Reference)
 
-This is a macOS port of [project-mark](https://github.com/vasuxd3v/project-mark), created purely as an
+This is a project created purely as an
 educational reference to compare Windows and macOS system programming concepts side-by-side.
 
 ---
