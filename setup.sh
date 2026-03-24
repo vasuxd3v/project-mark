@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup.sh — Cobalt macOS: install dependencies and build
+# setup.sh — project-mark macOS: install dependencies and build
 # Run this once from the project root: bash setup.sh
 
 set -e
