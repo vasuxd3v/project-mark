@@ -1,12 +1,15 @@
-import { Hash, Lock, ChevronLeft } from 'lucide-react';
+import { Hash, Lock, ChevronLeft, Flame, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Channel, Guild } from '../types/discord';
+import type { ChannelRating } from '../api/client';
 
 interface Props {
   guild: Guild | null;
   channels: Channel[];
   selectedId: string | null;
   onSelect: (ch: Channel) => void;
+  ratings: Record<string, ChannelRating>;
+  analyzing: boolean;
 }
 
 const TEXT_TYPES = new Set([0, 5]);
@@ -37,19 +40,58 @@ function guildIconUrl(guild: Guild): string | null {
   return `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=64`;
 }
 
-export default function ChannelSidebar({ guild, channels, selectedId, onSelect }: Props) {
+function RatingDot({ rating, analyzing }: { rating?: ChannelRating; analyzing: boolean }) {
+  if (analyzing) {
+    return (
+      <span
+        className="w-1.5 h-1.5 rounded-full shrink-0 pulse-dot"
+        style={{ background: 'var(--text-dim)', display: 'inline-block' }}
+      />
+    );
+  }
+  if (rating === 'hot') {
+    return (
+      <span title="AI: High-value dev channel">
+        <Flame size={10} style={{ color: '#f97316', flexShrink: 0 }} />
+      </span>
+    );
+  }
+  if (rating === 'warm') {
+    return (
+      <span title="AI: Might have useful content">
+        <Sparkles size={10} style={{ color: 'var(--accent-text)', flexShrink: 0 }} />
+      </span>
+    );
+  }
+  return null;
+}
+
+export default function ChannelSidebar({
+  guild,
+  channels,
+  selectedId,
+  onSelect,
+  ratings,
+  analyzing,
+}: Props) {
   const navigate = useNavigate();
   const { categorized, uncategorized } = organizeChannels(channels);
 
   function ChannelItem({ ch }: { ch: Channel }) {
     const isSelected = ch.id === selectedId;
+    const rating = ratings[ch.id];
+
     return (
       <button
         onClick={() => onSelect(ch)}
         className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-left"
         style={{
           background: isSelected ? 'var(--accent-glow)' : 'transparent',
-          color: isSelected ? 'var(--accent-text)' : 'var(--text-muted)',
+          color: isSelected
+            ? 'var(--accent-text)'
+            : rating === 'hot'
+              ? 'var(--text)'
+              : 'var(--text-muted)',
           border: isSelected ? '1px solid rgba(124,58,237,0.2)' : '1px solid transparent',
           cursor: 'pointer',
         }}
@@ -62,7 +104,8 @@ export default function ChannelSidebar({ guild, channels, selectedId, onSelect }
         onMouseLeave={(e) => {
           if (!isSelected) {
             e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = 'var(--text-muted)';
+            e.currentTarget.style.color =
+              rating === 'hot' ? 'var(--text)' : 'var(--text-muted)';
           }
         }}
       >
@@ -71,7 +114,8 @@ export default function ChannelSidebar({ guild, channels, selectedId, onSelect }
         ) : (
           <Hash size={13} className="shrink-0" style={{ opacity: 0.6 }} />
         )}
-        <span className="truncate">{ch.name}</span>
+        <span className="truncate flex-1">{ch.name}</span>
+        <RatingDot rating={rating} analyzing={analyzing && !rating} />
       </button>
     );
   }
@@ -124,14 +168,33 @@ export default function ChannelSidebar({ guild, channels, selectedId, onSelect }
         )}
       </div>
 
+      {/* AI legend */}
+      {(analyzing || Object.keys(ratings).length > 0) && (
+        <div
+          className="px-3 py-2 flex items-center gap-3 text-[10px]"
+          style={{ borderBottom: '1px solid var(--border-dim)', color: 'var(--text-dim)' }}
+        >
+          <span className="flex items-center gap-1">
+            <Flame size={9} style={{ color: '#f97316' }} /> hot
+          </span>
+          <span className="flex items-center gap-1">
+            <Sparkles size={9} style={{ color: 'var(--accent-text)' }} /> warm
+          </span>
+          {analyzing && (
+            <span className="ml-auto flex items-center gap-1" style={{ color: 'var(--accent-text)' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-current pulse-dot inline-block" />
+              AI scanning…
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Channel list */}
       <div className="flex-1 overflow-y-auto py-2 px-2">
-        {/* Uncategorized */}
         {uncategorized.map((ch) => (
           <ChannelItem key={ch.id} ch={ch} />
         ))}
 
-        {/* Categorized */}
         {categorized.map((cat) => (
           <div key={cat.id} className="mt-4 mb-1">
             <div

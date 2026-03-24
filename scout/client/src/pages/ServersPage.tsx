@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Crosshair, LogOut, Search, ServerCrash } from 'lucide-react';
-import { getGuilds, getMe } from '../api/client';
+import { getGuilds } from '../api/client';
 import { useAuth } from '../App';
 import type { CurrentUser, Guild } from '../types/discord';
 
@@ -36,26 +36,28 @@ export default function ServersPage() {
   const { user: ctxUser, token, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [user, setUser] = useState<CurrentUser | null>(ctxUser);
+  const [user] = useState<CurrentUser | null>(ctxUser);
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       try {
-        const [u, g] = await Promise.all([getMe(), getGuilds()]);
-        setUser(u);
-        setGuilds(g.sort((a, b) => a.name.localeCompare(b.name)));
+        const g = await getGuilds();
+        if (!cancelled) setGuilds(g.sort((a, b) => a.name.localeCompare(b.name)));
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     load();
-  }, [token]);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = guilds.filter((g) =>
     g.name.toLowerCase().includes(search.toLowerCase()),

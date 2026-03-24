@@ -38,3 +38,14 @@ export const searchMessages = (guildId: string, channelId: string, q: string) =>
   request<SearchResult>(
     `/api/guilds/${guildId}/search?channel_id=${channelId}&q=${encodeURIComponent(q)}`,
   );
+
+export type ChannelRating = 'hot' | 'warm' | 'cold';
+
+export const analyzeChannels = (
+  guildId: string,
+  channels: { id: string; name: string; topic?: string | null }[],
+) =>
+  request<Record<string, ChannelRating>>(`/api/guilds/${guildId}/analyze`, {
+    method: 'POST',
+    body: JSON.stringify({ channels }),
+  });

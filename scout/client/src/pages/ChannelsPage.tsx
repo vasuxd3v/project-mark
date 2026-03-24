@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Hash, Search, BookmarkCheck, Loader2, ChevronUp, X, AlertCircle } from 'lucide-react';
-import { getChannels, getGuilds, getMessages, searchMessages } from '../api/client';
+import { analyzeChannels, getChannels, getGuilds, getMessages, searchMessages } from '../api/client';
+import type { ChannelRating } from '../api/client';
 import ChannelSidebar from '../components/ChannelSidebar';
 import FilterBar from '../components/FilterBar';
 import MessageCard from '../components/MessageCard';
@@ -44,16 +45,32 @@ export default function ChannelsPage() {
   const [extracts, setExtracts] = useState<Message[]>(loadSaved);
   const [showExtracts, setShowExtracts] = useState(false);
 
+  const [ratings, setRatings] = useState<Record<string, ChannelRating>>({});
+  const [analyzing, setAnalyzing] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Load guild + channels
+  // Load guild + channels, then run AI analysis
   useEffect(() => {
     if (!guildId) return;
+    setRatings({});
     Promise.all([getGuilds(), getChannels(guildId)])
       .then(([guilds, chs]) => {
         setGuild(guilds.find((g) => g.id === guildId) ?? null);
         setChannels(chs);
+
+        // Run AI analysis on text channels only
+        const textChannels = chs.filter((c) => c.type === 0 || c.type === 5);
+        if (textChannels.length === 0) return;
+        setAnalyzing(true);
+        analyzeChannels(
+          guildId,
+          textChannels.map((c) => ({ id: c.id, name: c.name, topic: c.topic })),
+        )
+          .then((result) => setRatings(result))
+          .catch(() => {/* silently ignore if API key not configured */})
+          .finally(() => setAnalyzing(false));
       })
       .catch(console.error);
   }, [guildId]);
@@ -159,6 +176,8 @@ export default function ChannelsPage() {
         channels={channels}
         selectedId={selectedChannel?.id ?? null}
         onSelect={handleChannelSelect}
+        ratings={ratings}
+        analyzing={analyzing}
       />
 
       {/* Main panel */}
