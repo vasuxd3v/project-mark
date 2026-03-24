@@ -1,4 +1,4 @@
-# CMakeLists.txt — Cobalt macOS Port
+# CMakeLists.txt — project-mark macOS Port
 # Replaces: Cobalt.sln + Module/binninsploit.vcxproj (Visual Studio solution)
 #
 # Build system:
